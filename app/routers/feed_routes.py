@@ -1,0 +1,157 @@
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
+
+from ..deps import get_db, get_current_user
+from ..models import (
+    UserRole,
+    InternshipPost,
+    StudentPostInteraction,
+    Decision,
+    CompanyProfile,
+    StudentProfilePost,
+    CompanyStudentPostInteraction,
+    StudentProfile,
+    User,
+)
+from ..schemas import PostResponse, StudentProfilePostResponse
+from ..url_utils import to_public_url
+
+router = APIRouter(prefix="/feed", tags=["feed"])
+
+
+@router.get("/student", response_model=list[PostResponse])
+def student_feed(
+    request: Request,
+    db: Session = Depends(get_db),
+    current=Depends(get_current_user),
+):
+    if current.role != UserRole.STUDENT:
+        raise HTTPException(status_code=403, detail="Only students have this feed")
+
+    # Hide a post only if BOTH sides have acted (student decided and company decided).
+    # Otherwise, keep it visible after LIKE until the other side reacts.
+    company_decisions = (
+        db.query(CompanyStudentPostInteraction.student_post_id)
+        .filter(CompanyStudentPostInteraction.decision != Decision.NONE)
+        .subquery()
+    )
+
+    interactions = (
+        db.query(StudentPostInteraction.post_id)
+        .join(InternshipPost, InternshipPost.id == StudentPostInteraction.post_id)
+        .filter(StudentPostInteraction.student_user_id == current.id)
+        .filter(
+            # hide only if student passed OR (student decided AND company has a decision on this post)
+            (
+                (StudentPostInteraction.decision == Decision.PASS)
+                | (
+                    (StudentPostInteraction.decision != Decision.NONE)
+                    & (InternshipPost.id.in_(company_decisions))
+                )
+            )
+        )
+        .subquery()
+    )
+
+    posts = (
+        db.query(InternshipPost)
+        .filter(InternshipPost.is_active == True)
+        .filter(~InternshipPost.id.in_(interactions))
+        .order_by(InternshipPost.created_at.desc())
+        .limit(50)
+        .all()
+    )
+
+    out = []
+    for p in posts:
+        company_name = None
+        cp = db.query(CompanyProfile).filter(CompanyProfile.user_id == p.company_user_id).first()
+        if cp and cp.company_name:
+            company_name = cp.company_name
+
+        company_user: User | None = db.query(User).filter(User.id == p.company_user_id).first()
+        company_profile_image_url = company_user.profile_image_url if company_user else None
+
+        out.append(PostResponse(
+            id=p.id,
+            companyUserId=p.company_user_id,
+            companyName=company_name,
+            companyProfileImageUrl=to_public_url(company_profile_image_url, request),
+            title=p.title,
+            description=p.description,
+            location=p.location,
+            imageUrl=to_public_url(p.image_url, request),
+            createdAt=p.created_at,
+        ))
+    return out
+
+
+@router.get("/company", response_model=list[StudentProfilePostResponse])
+def company_feed(
+    request: Request,
+    db: Session = Depends(get_db),
+    current=Depends(get_current_user),
+):
+    """
+    Feed εταιρίας: επιστρέφει StudentProfilePost (κάρτες φοιτητών σαν posts).
+    Εξαιρεί όσα η εταιρία έχει ήδη κάνει LIKE/PASS (decision != NONE).
+    """
+    if current.role != UserRole.COMPANY:
+        raise HTTPException(status_code=403, detail="Only companies have this feed")
+
+    # For companies: hide a student profile post only if company passed, OR company decided and student decided.
+    student_decisions = (
+        db.query(StudentPostInteraction.student_user_id, StudentPostInteraction.post_id, StudentPostInteraction.decision)
+        .filter(StudentPostInteraction.decision != Decision.NONE)
+        .subquery()
+    )
+
+    decided = (
+        db.query(CompanyStudentPostInteraction.student_post_id)
+        .filter(CompanyStudentPostInteraction.company_user_id == current.id)
+        .filter(
+            (CompanyStudentPostInteraction.decision == Decision.PASS)
+            | (
+                (CompanyStudentPostInteraction.decision != Decision.NONE)
+                & (
+                    CompanyStudentPostInteraction.student_post_id.in_(
+                        db.query(StudentProfilePost.id)
+                        .join(student_decisions, student_decisions.c.student_user_id == StudentProfilePost.student_user_id)
+                    )
+                )
+            )
+        )
+        .subquery()
+    )
+
+    posts = (
+        db.query(StudentProfilePost)
+        .filter(StudentProfilePost.is_active == True)
+        .filter(~StudentProfilePost.id.in_(decided))
+        .order_by(StudentProfilePost.created_at.desc())
+        .limit(50)
+        .all()
+    )
+
+    out = []
+    for p in posts:
+        student_user: User | None = db.query(User).filter(User.id == p.student_user_id).first()
+        sp: StudentProfile | None = db.query(StudentProfile).filter(StudentProfile.user_id == p.student_user_id).first()
+
+        out.append(StudentProfilePostResponse(
+            id=p.id,
+            studentUserId=p.student_user_id,
+            studentUsername=student_user.username if student_user else None,
+            studentName=student_user.name if student_user else None,
+            studentSurname=student_user.surname if student_user else None,
+            studentProfileImageUrl=to_public_url(student_user.profile_image_url if student_user else None, request),
+            university=sp.university if sp else None,
+            department=sp.department if sp else None,
+            title=p.title,
+            description=p.description,
+            location=p.location,
+            imageUrl=to_public_url(p.image_url, request),
+            createdAt=p.created_at,
+        ))
+
+    return out
