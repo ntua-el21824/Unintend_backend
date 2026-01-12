@@ -11,6 +11,7 @@ from .routers.interaction_routes import router as interactions_router
 from .routers.application_routes import router as applications_router
 from .routers.chat_routes import router as chat_router
 from .routers.profile_posts_routes import router as profile_posts_router
+from .routers.profiles_routes import router as profiles_router
 from .routers.media_routes import router as media_router
 from app.routers import saves_routes
 from .migrations import ensure_sqlite_columns
@@ -44,6 +45,7 @@ app.include_router(interactions_router)
 app.include_router(applications_router)
 app.include_router(chat_router)
 app.include_router(profile_posts_router)
+app.include_router(profiles_router)
 app.include_router(media_router)
 app.include_router(saves_routes.router)
 

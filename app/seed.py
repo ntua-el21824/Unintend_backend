@@ -36,6 +36,9 @@ def _find_upload_url(*, subdir: str, stem: str) -> str | None:
     return None
 
 
+_SKIP_PROFILE_IMAGE_USERNAMES = {"eleni"}
+
+
 def _maybe_update(model_obj, **fields):
     changed = False
     for key, value in fields.items():
@@ -577,9 +580,10 @@ def main():
             )
 
             # Optional: set profile image if a matching file exists in uploads/profiles/
-            existing_profile_url = _find_upload_url(subdir="profiles", stem=spec["username"])
-            if existing_profile_url and su.profile_image_url != existing_profile_url:
-                su.profile_image_url = existing_profile_url
+            if spec["username"] not in _SKIP_PROFILE_IMAGE_USERNAMES:
+                existing_profile_url = _find_upload_url(subdir="profiles", stem=spec["username"])
+                if existing_profile_url and su.profile_image_url != existing_profile_url:
+                    su.profile_image_url = existing_profile_url
 
             sp = ensure_student_profile(
                 db,

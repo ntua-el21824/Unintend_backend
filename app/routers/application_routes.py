@@ -1,12 +1,13 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_
+from sqlalchemy import desc, and_, func
 
 from ..deps import get_db, get_current_user
 from ..models import (
     UserRole, Application, Conversation, Message,
-    MessageType, ApplicationStatus, InternshipPost, User
+    MessageType, ApplicationStatus, InternshipPost, User,
+    ConversationParticipant,
 )
 from ..schemas import ApplicationListItem, SetApplicationStatusRequest
 
@@ -46,11 +47,47 @@ def list_applications(
         if not conv:
             continue
 
+        # Backfill participant state for existing conversations (seeded to last message so users
+        # don't suddenly see lots of unread after this feature ships).
+        part = (
+            db.query(ConversationParticipant)
+            .filter(
+                ConversationParticipant.conversation_id == conv.id,
+                ConversationParticipant.user_id == current.id,
+            )
+            .first()
+        )
+        if not part:
+            last_msg_id = (
+                db.query(func.max(Message.id))
+                .filter(Message.conversation_id == conv.id)
+                .scalar()
+            )
+            part = ConversationParticipant(
+                conversation_id=conv.id,
+                user_id=current.id,
+                last_read_message_id=last_msg_id,
+                updated_at=datetime.utcnow(),
+            )
+            db.add(part)
+            db.flush()
+
         last_msg = (
             db.query(Message)
             .filter(Message.conversation_id == conv.id)
             .order_by(desc(Message.created_at))
             .first()
+        )
+
+        threshold = part.last_read_message_id or 0
+        unread_count = (
+            db.query(func.count(Message.id))
+            .filter(Message.conversation_id == conv.id)
+            .filter(Message.id > threshold)
+            .filter(Message.sender_user_id.isnot(None))
+            .filter(Message.sender_user_id != current.id)
+            .scalar()
+            or 0
         )
 
         post = db.get(InternshipPost, a.post_id)
@@ -72,8 +109,12 @@ def list_applications(
             postTitle=post_title,
             otherPartyName=other_name,
             lastMessage=last_msg.text if last_msg else None,
+            unreadCount=int(unread_count),
+            lastMessageId=last_msg.id if last_msg else None,
+            lastMessageAt=last_msg.created_at if last_msg else None,
         ))
 
+    db.commit()
     return out
 
 
@@ -91,7 +132,13 @@ def set_application_status(
     if current.role != UserRole.COMPANY or app.company_user_id != current.id:
         raise HTTPException(status_code=403, detail="Only the owning company can update status")
 
-    new_status = ApplicationStatus(req.status)
+    # Some clients send LIKE/PASS; map to application statuses.
+    if req.status == "LIKE":
+        new_status = ApplicationStatus.ACCEPTED
+    elif req.status == "PASS":
+        new_status = ApplicationStatus.DECLINED
+    else:
+        new_status = ApplicationStatus(req.status)
 
     # If already that status, do nothing
     if app.status == new_status:

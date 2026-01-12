@@ -57,12 +57,13 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=MeResponse)
 def me(request: Request, db: Session = Depends(get_db), current: User = Depends(get_current_user)):
-    bio = studies = experience = None
+    bio = skills = studies = experience = None
     company_name = company_bio = None
     if current.role == UserRole.STUDENT:
         sp = db.query(StudentProfile).filter(StudentProfile.user_id == current.id).first()
         if sp:
             bio = sp.bio
+            skills = sp.skills
             studies = sp.studies
             experience = sp.experience
     else:
@@ -80,6 +81,7 @@ def me(request: Request, db: Session = Depends(get_db), current: User = Depends(
         role=current.role,
         profileImageUrl=to_public_url(current.profile_image_url, request),
         bio=bio,
+        skills=skills,
         studies=studies,
         experience=experience,
         companyName=company_name,
@@ -99,7 +101,7 @@ def update_me(
     if req.surname is not None:
         current.surname = req.surname
 
-    bio = studies = experience = None
+    bio = skills = studies = experience = None
     company_name = company_bio = None
 
     if current.role == UserRole.STUDENT:
@@ -111,12 +113,15 @@ def update_me(
 
         if req.bio is not None:
             sp.bio = req.bio
+        if req.skills is not None:
+            sp.skills = req.skills
         if req.studies is not None:
             sp.studies = req.studies
         if req.experience is not None:
             sp.experience = req.experience
 
         bio = sp.bio
+        skills = sp.skills
         studies = sp.studies
         experience = sp.experience
 
@@ -151,6 +156,7 @@ def update_me(
         role=current.role,
         profileImageUrl=to_public_url(current.profile_image_url, request),
         bio=bio,
+        skills=skills,
         studies=studies,
         experience=experience,
         companyName=company_name,

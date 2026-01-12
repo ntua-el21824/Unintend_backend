@@ -17,6 +17,21 @@ def ensure_sqlite_columns(engine) -> None:
         "users": {
             "profile_image_url": "TEXT",
         },
+        "student_profiles": {
+            "university": "TEXT",
+            "department": "TEXT",
+            "bio": "TEXT",
+            "skills": "TEXT",
+            "studies": "TEXT",
+            "experience": "TEXT",
+        },
+        "company_profiles": {
+            "company_name": "TEXT",
+            "industry": "TEXT",
+            "description": "TEXT",
+            "website": "TEXT",
+            "bio": "TEXT",
+        },
         "internship_posts": {
             "image_url": "TEXT",
         },

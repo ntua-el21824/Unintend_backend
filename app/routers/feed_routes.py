@@ -7,6 +7,8 @@ from ..models import (
     InternshipPost,
     StudentPostInteraction,
     Decision,
+    Application,
+    ApplicationStatus,
     CompanyProfile,
     StudentProfilePost,
     CompanyStudentPostInteraction,
@@ -28,11 +30,12 @@ def student_feed(
     if current.role != UserRole.STUDENT:
         raise HTTPException(status_code=403, detail="Only students have this feed")
 
-    # Hide a post only if BOTH sides have acted (student decided and company decided).
-    # Otherwise, keep it visible after LIKE until the other side reacts.
-    company_decisions = (
-        db.query(CompanyStudentPostInteraction.student_post_id)
-        .filter(CompanyStudentPostInteraction.decision != Decision.NONE)
+    # Hide a post only if the student PASSed it, OR the company has responded to the Application
+    # (ACCEPTED/DECLINED). Otherwise keep it visible after LIKE until the other side reacts.
+    resolved_app_post_ids = (
+        db.query(Application.post_id)
+        .filter(Application.student_user_id == current.id)
+        .filter(Application.status != ApplicationStatus.PENDING)
         .subquery()
     )
 
@@ -41,14 +44,8 @@ def student_feed(
         .join(InternshipPost, InternshipPost.id == StudentPostInteraction.post_id)
         .filter(StudentPostInteraction.student_user_id == current.id)
         .filter(
-            # hide only if student passed OR (student decided AND company has a decision on this post)
-            (
-                (StudentPostInteraction.decision == Decision.PASS)
-                | (
-                    (StudentPostInteraction.decision != Decision.NONE)
-                    & (InternshipPost.id.in_(company_decisions))
-                )
-            )
+            (StudentPostInteraction.decision == Decision.PASS)
+            | (InternshipPost.id.in_(resolved_app_post_ids))
         )
         .subquery()
     )

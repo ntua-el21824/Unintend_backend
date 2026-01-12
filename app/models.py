@@ -241,6 +241,28 @@ class Conversation(Base):
     application = relationship("Application", back_populates="conversation")
     messages = relationship("Message", back_populates="conversation")
 
+    participants = relationship("ConversationParticipant", back_populates="conversation")
+
+
+class ConversationParticipant(Base):
+    __tablename__ = "conversation_participants"
+    __table_args__ = (
+        UniqueConstraint("conversation_id", "user_id", name="uq_conversation_user"),
+    )
+
+    id = Column(Integer, primary_key=True)
+
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+
+    # Unread calculation uses: messages.id > last_read_message_id AND sender_user_id != user_id
+    last_read_message_id = Column(Integer, ForeignKey("messages.id"), nullable=True)
+
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    conversation = relationship("Conversation", back_populates="participants")
+    user = relationship("User")
+
 
 class Message(Base):
     __tablename__ = "messages"

@@ -33,6 +33,7 @@ class MeResponse(BaseModel):
     role: UserRole
     profileImageUrl: Optional[str] = None
     bio: Optional[str] = None
+    skills: Optional[str] = None
     studies: Optional[str] = None
     experience: Optional[str] = None
     companyName: Optional[str] = None
@@ -43,10 +44,27 @@ class UpdateMeRequest(BaseModel):
     name: Optional[str] = None
     surname: Optional[str] = None
     bio: Optional[str] = None
+    skills: Optional[str] = None
     studies: Optional[str] = None
     experience: Optional[str] = None
     companyName: Optional[str] = None
     companyBio: Optional[str] = None
+
+
+class StudentPublicProfileResponse(BaseModel):
+    id: int
+    username: str
+    name: Optional[str] = None
+    surname: Optional[str] = None
+    profileImageUrl: Optional[str] = None
+
+    university: Optional[str] = None
+    department: Optional[str] = None
+
+    bio: Optional[str] = None
+    skills: Optional[str] = None
+    studies: Optional[str] = None
+    experience: Optional[str] = None
 
 
 class PostCreateRequest(BaseModel):
@@ -149,12 +167,18 @@ class ApplicationListItem(BaseModel):
     # requested
     lastMessage: Optional[str]
 
+    # unread state (for Messages list dot)
+    unreadCount: int = 0
+    lastMessageId: Optional[int] = None
+    lastMessageAt: Optional[datetime] = None
+
     class Config:
         from_attributes = True
 
 
 class SetApplicationStatusRequest(BaseModel):
-    status: Literal["ACCEPTED", "DECLINED"]
+    # Backwards-compatible: some clients send LIKE/PASS instead of ACCEPTED/DECLINED.
+    status: Literal["ACCEPTED", "DECLINED", "LIKE", "PASS"]
 
 
 class MessageResponse(BaseModel):
@@ -173,3 +197,17 @@ class MessageResponse(BaseModel):
 
 class SendMessageRequest(BaseModel):
     text: str
+
+
+class MarkConversationReadRequest(BaseModel):
+    # Option A: best
+    lastReadMessageId: Optional[int] = None
+
+    # Option B
+    readAt: Optional[datetime] = None
+
+
+class MarkConversationReadResponse(BaseModel):
+    conversationId: int
+    unreadCount: int
+    lastReadMessageId: Optional[int] = None
