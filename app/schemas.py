@@ -82,6 +82,7 @@ class PostResponse(BaseModel):
     description: str
     location: Optional[str]
     imageUrl: Optional[str] = None
+    saved: bool = False
     createdAt: datetime
 
     class Config:

@@ -70,6 +70,13 @@ def student_feed(
         company_user: User | None = db.query(User).filter(User.id == p.company_user_id).first()
         company_profile_image_url = company_user.profile_image_url if company_user else None
 
+        # Check if post is saved by current student
+        interaction = db.query(StudentPostInteraction).filter(
+            StudentPostInteraction.student_user_id == current.id,
+            StudentPostInteraction.post_id == p.id
+        ).first()
+        is_saved = interaction.saved if interaction else False
+
         out.append(PostResponse(
             id=p.id,
             companyUserId=p.company_user_id,
@@ -79,6 +86,7 @@ def student_feed(
             description=p.description,
             location=p.location,
             imageUrl=to_public_url(p.image_url, request),
+            saved=is_saved,
             createdAt=p.created_at,
         ))
     return out

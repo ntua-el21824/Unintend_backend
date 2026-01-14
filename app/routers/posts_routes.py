@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from ..deps import get_db, get_current_user
-from ..models import UserRole, InternshipPost, CompanyProfile, User
+from ..models import UserRole, InternshipPost, CompanyProfile, User, StudentPostInteraction
 from ..schemas import PostCreateRequest, PostResponse
 from ..url_utils import to_public_url
 
@@ -43,6 +43,7 @@ def create_post(
         description=post.description,
         location=post.location,
         imageUrl=to_public_url(post.image_url, request),
+        saved=False,
         createdAt=post.created_at,
     )
 
@@ -79,6 +80,7 @@ def list_my_company_posts(
             description=p.description,
             location=p.location,
             imageUrl=to_public_url(p.image_url, request),
+            saved=False,
             createdAt=p.created_at,
         )
         for p in posts
@@ -109,8 +111,18 @@ def list_company_posts(
     cu: User | None = db.query(User).filter(User.id == company_user_id).first()
     company_profile_image_url = cu.profile_image_url if cu else None
 
-    return [
-        PostResponse(
+    out = []
+    for p in posts:
+        # Check if current user is student and has saved this post
+        is_saved = False
+        if current.role == UserRole.STUDENT:
+            interaction = db.query(StudentPostInteraction).filter(
+                StudentPostInteraction.student_user_id == current.id,
+                StudentPostInteraction.post_id == p.id
+            ).first()
+            is_saved = interaction.saved if interaction else False
+
+        out.append(PostResponse(
             id=p.id,
             companyUserId=p.company_user_id,
             companyName=company_name,
@@ -119,10 +131,10 @@ def list_company_posts(
             description=p.description,
             location=p.location,
             imageUrl=to_public_url(p.image_url, request),
+            saved=is_saved,
             createdAt=p.created_at,
-        )
-        for p in posts
-    ]
+        ))
+    return out
 
 
 @router.delete("/{post_id}", status_code=204)
