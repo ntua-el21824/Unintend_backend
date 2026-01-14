@@ -34,6 +34,7 @@ def ensure_sqlite_columns(engine) -> None:
         },
         "internship_posts": {
             "image_url": "TEXT",
+            "department": "TEXT",
         },
         "student_profile_posts": {
             "image_url": "TEXT",

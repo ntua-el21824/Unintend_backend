@@ -140,6 +140,7 @@ def list_saved_posts_for_student(
                 "companyName": (cp.company_name if cp else None),
                 "title": post.title,
                 "location": post.location,
+                "department": getattr(post, "department", None),
                 "description": post.description,
                 "savedAt": spi.saved_at.isoformat() if spi.saved_at else None,
             }

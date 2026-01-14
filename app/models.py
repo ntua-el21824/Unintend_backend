@@ -97,6 +97,8 @@ class InternshipPost(Base):
     description = Column(Text, nullable=False)
     location = Column(String(120), nullable=True)
 
+    department = Column(String(120), nullable=True)
+
     image_url = Column(Text, nullable=True)
 
     is_active = Column(Boolean, default=True, nullable=False)

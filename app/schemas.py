@@ -71,6 +71,7 @@ class PostCreateRequest(BaseModel):
     title: str
     description: str
     location: Optional[str] = None
+    department: Optional[str] = None
 
 
 class PostResponse(BaseModel):
@@ -81,6 +82,7 @@ class PostResponse(BaseModel):
     title: str
     description: str
     location: Optional[str]
+    department: Optional[str] = None
     imageUrl: Optional[str] = None
     createdAt: datetime
 

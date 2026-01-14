@@ -108,19 +108,30 @@ def ensure_company_profile(db: Session, user_id: int, company_name: str, industr
     return cp
 
 
-def create_post(db: Session, company_user_id: int, title: str, description: str, location: str):
+def create_post(
+    db: Session,
+    company_user_id: int,
+    title: str,
+    description: str,
+    location: str,
+    department: str | None = None,
+):
     p = db.query(InternshipPost).filter(
         InternshipPost.company_user_id == company_user_id,
         InternshipPost.title == title,
     ).first()
     if p:
-        _maybe_update(p, description=description, location=location, is_active=True)
+        update_fields = {"description": description, "location": location, "is_active": True}
+        if department is not None:
+            update_fields["department"] = department
+        _maybe_update(p, **update_fields)
         return p
     p = InternshipPost(
         company_user_id=company_user_id,
         title=title,
         description=description,
         location=location,
+        department=department,
         is_active=True,
         created_at=datetime.utcnow()
     )

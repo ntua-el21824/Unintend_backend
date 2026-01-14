@@ -24,6 +24,7 @@ def create_post(
         title=req.title,
         description=req.description,
         location=req.location,
+        department=req.department,
         is_active=True,
     )
     db.add(post)
@@ -42,6 +43,7 @@ def create_post(
         title=post.title,
         description=post.description,
         location=post.location,
+        department=post.department,
         imageUrl=to_public_url(post.image_url, request),
         createdAt=post.created_at,
     )
@@ -78,6 +80,7 @@ def list_my_company_posts(
             title=p.title,
             description=p.description,
             location=p.location,
+            department=p.department,
             imageUrl=to_public_url(p.image_url, request),
             createdAt=p.created_at,
         )
@@ -118,6 +121,7 @@ def list_company_posts(
             title=p.title,
             description=p.description,
             location=p.location,
+            department=p.department,
             imageUrl=to_public_url(p.image_url, request),
             createdAt=p.created_at,
         )
