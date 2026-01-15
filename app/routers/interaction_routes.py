@@ -243,8 +243,8 @@ def student_decision_post(
             initial_status=ApplicationStatus.DECLINED,
         )
     elif row.decision == Decision.LIKE:
-        # Άμεσο "Ready to connect?" όταν ο φοιτητής κάνει LIKE
-        create_application_and_conversation_if_needed(db, current.id, post, initial_status=ApplicationStatus.ACCEPTED)
+        # Δημιουργία PENDING Application - θα γίνει ACCEPTED όταν η εταιρεία κάνει LIKE πίσω
+        create_application_and_conversation_if_needed(db, current.id, post, initial_status=ApplicationStatus.PENDING)
 
     db.commit()
     return {"ok": True}

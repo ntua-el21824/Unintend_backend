@@ -34,3 +34,7 @@ Thumbs.db
 
 # Uploads (uncomment if you don't want to commit uploads)
 # uploads/
+
+# Backend marti
+unintend.db
+*.db
