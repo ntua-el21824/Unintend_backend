@@ -709,21 +709,24 @@ def main():
             company_user_id=c1.id,
             title="Flutter Intern",
             description="Help us build a mobile app. Nice-to-have: REST APIs, Firebase.",
-            location="Athens / Hybrid"
+            location="Athens / Hybrid",
+            department="Software Development",
         )
         p2 = create_post(
             db,
             company_user_id=c1.id,
             title="Backend Intern (FastAPI)",
             description="Work with FastAPI + SQLite/Postgres. Learn auth, APIs, testing.",
-            location="Remote"
+            location="Remote",
+            department="Software Development",
         )
         p3 = create_post(
             db,
             company_user_id=c2.id,
             title="Data Intern",
             description="Data cleaning and dashboards. Python required.",
-            location="Athens"
+            location="Athens",
+            department="Data Analytics",
         )
 
         p4 = create_post(
@@ -732,6 +735,7 @@ def main():
             title="QA / Automation Intern",
             description="Write automated tests and help us improve release quality.",
             location="Athens / Remote",
+            department="Software Development",
         )
         p5 = create_post(
             db,
@@ -739,6 +743,7 @@ def main():
             title="Backend Intern (Payments)",
             description="APIs, integrations and database work. Interest in security is a plus.",
             location="Remote",
+            department="Software Development",
         )
         p6 = create_post(
             db,
@@ -746,6 +751,7 @@ def main():
             title="Frontend Intern (Dashboard)",
             description="Build internal dashboards. React/TypeScript preferred.",
             location="Thessaloniki / Hybrid",
+            department="Software Development",
         )
 
         p7 = create_post(
@@ -754,6 +760,7 @@ def main():
             title="Computer Vision Intern",
             description="Work on image datasets and model evaluation. Python required.",
             location="Athens / Hybrid",
+            department="Data Analytics",
         )
         p8 = create_post(
             db,
@@ -761,6 +768,7 @@ def main():
             title="Mobile Intern",
             description="Help build a student-facing app. Interest in Flutter/React Native is a plus.",
             location="Athens",
+            department="Software Development",
         )
         p9 = create_post(
             db,
@@ -768,6 +776,7 @@ def main():
             title="Data Intern (Operations)",
             description="Dashboards and ETL for fleet KPIs. SQL + Python.",
             location="Piraeus / Hybrid",
+            department="Data Analytics",
         )
         p10 = create_post(
             db,
@@ -775,6 +784,7 @@ def main():
             title="Fullstack Intern",
             description="APIs + frontend features for open-data portals. Any modern stack welcome.",
             location="Remote",
+            department="Software Development",
         )
 
         # Optional: set internship post images if present in uploads/internship-posts/<post_id>.<ext>

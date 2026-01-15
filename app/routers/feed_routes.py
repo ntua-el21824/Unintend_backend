@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -18,13 +20,17 @@ from ..models import (
 )
 from ..schemas import PostResponse, StudentProfilePostResponse
 from ..url_utils import to_public_url
+from ..departments import normalize_department
 
 router = APIRouter(prefix="/feed", tags=["feed"])
+
+logger = logging.getLogger(__name__)
 
 
 @router.get("/student", response_model=list[PostResponse])
 def student_feed(
     request: Request,
+    department: str | None = None,
     db: Session = Depends(get_db),
     current=Depends(get_current_user),
 ):
@@ -51,10 +57,26 @@ def student_feed(
         .subquery()
     )
 
-    posts = (
+    department_filter = normalize_department(department)
+    logger.info(
+        "/feed/student department=%r normalized=%r",
+        department,
+        department_filter,
+    )
+
+    posts_query = (
         db.query(InternshipPost)
         .filter(InternshipPost.is_active == True)
         .filter(~InternshipPost.id.in_(interactions))
+    )
+
+    if department_filter:
+        posts_query = posts_query.filter(
+            func.trim(func.lower(InternshipPost.department)) == department_filter.lower()
+        )
+
+    posts = (
+        posts_query
         .order_by(InternshipPost.created_at.desc())
         .limit(50)
         .all()
@@ -96,6 +118,7 @@ def student_feed(
 @router.get("/company", response_model=list[StudentProfilePostResponse])
 def company_feed(
     request: Request,
+    department: str | None = None,
     db: Session = Depends(get_db),
     current=Depends(get_current_user),
 ):
@@ -149,10 +172,27 @@ def company_feed(
         .subquery()
     )
 
-    posts = (
+    department_filter = normalize_department(department)
+    logger.info(
+        "/feed/company department=%r normalized=%r",
+        department,
+        department_filter,
+    )
+
+    posts_query = (
         db.query(StudentProfilePost)
         .filter(StudentProfilePost.is_active == True)
         .filter(~StudentProfilePost.id.in_(decided))
+    )
+
+    if department_filter:
+        posts_query = posts_query.join(
+            StudentProfile,
+            StudentProfile.user_id == StudentProfilePost.student_user_id,
+        ).filter(func.trim(func.lower(StudentProfile.department)) == department_filter.lower())
+
+    posts = (
+        posts_query
         .order_by(StudentProfilePost.created_at.desc())
         .limit(50)
         .all()

@@ -5,6 +5,7 @@ from ..deps import get_db, get_current_user
 from ..models import UserRole, InternshipPost, CompanyProfile, User, StudentPostInteraction
 from ..schemas import PostCreateRequest, PostResponse
 from ..url_utils import to_public_url
+from ..departments import CANONICAL_DEPARTMENTS, normalize_department
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -19,12 +20,23 @@ def create_post(
     if current.role != UserRole.COMPANY:
         raise HTTPException(status_code=403, detail="Only companies can create posts")
 
+    department = normalize_department(req.department)
+    if department is not None and department not in CANONICAL_DEPARTMENTS:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Invalid department",
+                "allowed": list(CANONICAL_DEPARTMENTS),
+                "received": req.department,
+            },
+        )
+
     post = InternshipPost(
         company_user_id=current.id,
         title=req.title,
         description=req.description,
         location=req.location,
-        department=req.department,
+        department=department,
         is_active=True,
     )
     db.add(post)
